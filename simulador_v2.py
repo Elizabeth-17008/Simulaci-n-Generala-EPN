@@ -11,6 +11,7 @@ from functools import lru_cache
 
 NUMERO_PAREJAS = 20
 SEMILLA = 2026
+ARCHIVO_CSV = "W03_Piloto.csv"
 
 NUMEROS = [
     "Unos",
@@ -52,20 +53,25 @@ def puntajes(dados):
         for numero, categoria in enumerate(NUMEROS, 1)
     }
 
-    corta = any(
-        set(range(i, i + 4)).issubset(valores)
-        for i in range(1, 4)
-    )
+    # Escalera larga: cinco números consecutivos
 
     larga = any(
         set(range(i, i + 5)).issubset(valores)
         for i in range(1, 3)
     )
 
+    # Escalera corta: cuatro números consecutivos,
+    # siempre que no sea una escalera larga.
+
+    corta = any(
+        set(range(i, i + 4)).issubset(valores)
+        for i in range(1, 4)
+    ) and not larga
+
     puntos["Escalera_corta"] = 20 if corta else 0
     puntos["Escalera_larga"] = 30 if larga else 0
     puntos["Full"] = 30 if cantidades == [2, 3] else 0
-    puntos["Poker"] = 45 if max(cantidades) >= 4 else 0
+    puntos["Poker"] = 45 if max(cantidades) == 4 else 0
     puntos["Generala"] = 50 if max(cantidades) == 5 else 0
 
     return puntos
@@ -104,6 +110,7 @@ def valor_categoria(puntos, categoria, subtotal):
     # si se alcanza el mínimo de 63 puntos.
 
     if categoria in NUMEROS:
+
         if subtotal < 63 <= subtotal + valor:
             valor += 35
 
@@ -166,6 +173,7 @@ def elegir_dados(dados, disponibles, subtotal):
 def jugar(estrategia, tiradas_iniciales, rng):
 
     planilla = {}
+
     disponibles = CATEGORIAS.copy()
 
     primera_suma = sum(tiradas_iniciales[0])
@@ -219,6 +227,8 @@ def jugar(estrategia, tiradas_iniciales, rng):
 
             categoria = rng.choice(disponibles)
 
+        # Registrar el puntaje de la categoría
+
         planilla[categoria] = puntos[categoria]
 
         disponibles.remove(categoria)
@@ -244,6 +254,8 @@ def jugar(estrategia, tiradas_iniciales, rng):
     }
 
     # Registrar las combinaciones especiales
+    # 1 = combinación registrada con puntos
+    # 0 = combinación no registrada con puntos
 
     for categoria in ESPECIALES:
 
@@ -251,11 +263,28 @@ def jugar(estrategia, tiradas_iniciales, rng):
             planilla[categoria] > 0
         )
 
-    # NUEVA VARIABLE: BONIFICACIÓN OBTENIDA
+    # Registrar la bonificación obtenida
     # 1 = obtuvo la bonificación
     # 0 = no obtuvo la bonificación
 
     registro["Bonificacion_obtenida"] = int(bonus > 0)
+
+    # EVENTO A:
+    # Obtener al menos una combinación especial
+    # registrada con puntos en la planilla.
+
+    registro["Evento_A"] = int(
+        any(planilla[c] > 0 for c in ESPECIALES)
+    )
+
+    # EVENTO B:
+    # Utilizar una estrategia probabilística.
+    # 1 = estrategia probabilística
+    # 0 = decisiones aleatorias
+
+    registro["Evento_B"] = int(
+        estrategia == "Probabilistica"
+    )
 
     # Verificaciones internas
 
@@ -263,6 +292,8 @@ def jugar(estrategia, tiradas_iniciales, rng):
     assert 0 <= total <= 315
     assert 5 <= primera_suma <= 30
     assert registro["Bonificacion_obtenida"] in (0, 1)
+    assert registro["Evento_A"] in (0, 1)
+    assert registro["Evento_B"] in (0, 1)
 
     return registro
 
@@ -298,9 +329,8 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
     p2 = aleatoria["Puntos_acumulados"]
 
     # Resultado de la partida
-    # 1 = Victoria
     # 0 = Derrota
-    
+    # 1 = Victoria
 
     if p1 > p2:
 
@@ -311,11 +341,6 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
 
         probabilistica["Resultado_partida"] = 0
         aleatoria["Resultado_partida"] = 1
-
-    else:
-
-        probabilistica["Resultado_partida"] = 2
-        aleatoria["Resultado_partida"] = 2
 
     for registro in [probabilistica, aleatoria]:
 
@@ -342,16 +367,19 @@ columnas = [
     "Poker",
     "Generala",
     "Bonificacion_obtenida",
-    "Resultado_partida"
+    "Resultado_partida",
+    "Evento_A",
+    "Evento_B"
 ]
 
 with open(
-    "W03_Piloto.csv", "w",
+    ARCHIVO_CSV, "w",
     newline="", encoding="utf-8-sig"
 ) as archivo:
 
     escritor = csv.DictWriter(
-        archivo, fieldnames=columnas
+        archivo,
+        fieldnames=columnas
     )
 
     escritor.writeheader()
@@ -367,4 +395,4 @@ print("Partidas aleatorias:", NUMERO_PAREJAS)
 print("Registros individuales:", len(registros))
 print("Variables de estudio:", len(columnas) - 1)
 print("Total de columnas:", len(columnas))
-print("Archivo generado: W03_Piloto_corregido.csv")
+print("Archivo generado:", ARCHIVO_CSV)

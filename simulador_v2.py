@@ -241,6 +241,27 @@ def elegir_dados_intuitiva(dados, disponibles, rng):
         if dado == numero_elegido
     )
 
+    # 6.1. MODELO DE ALEATORIEDAD CON INTUICIÓN
+
+def elegir_dados_aleatoria(dados, disponibles, rng):
+
+    if rng.random() < PROBABILIDAD_INTUICION:
+
+        # 70 %: decisión intuitiva
+
+        return elegir_dados_intuitiva(
+            dados, disponibles, rng
+        )
+
+    else:
+
+        # 30 %: decisión aleatoria
+
+        return tuple(
+            dado for dado in dados
+            if rng.random() < 0.5
+        )
+        
     return conservados
 
 
@@ -278,11 +299,11 @@ def jugar(estrategia, tiradas_iniciales, rng):
                     dados, disponibles, subtotal
                 )
 
-            # MODELO INTUITIVO
+            # MODELO DE ALEATORIEDAD
 
-            elif estrategia == "Intuitiva":
+            elif estrategia == "Aleatoria":
 
-                conservados = elegir_dados_intuitiva(
+                conservados = elegir_dados_aleatoria(
                     dados, disponibles, rng
                 )
 
@@ -311,9 +332,6 @@ def jugar(estrategia, tiradas_iniciales, rng):
 
         if estrategia == "Probabilistica":
 
-            # Considerar el puntaje inmediato
-            # y la posibilidad de obtener la bonificación
-
             categoria = max(
                 disponibles,
                 key=lambda c: valor_categoria(
@@ -323,21 +341,43 @@ def jugar(estrategia, tiradas_iniciales, rng):
 
         else:
 
-            # El jugador intuitivo selecciona
-            # la categoría de mayor puntaje inmediato
+            if rng.random() < PROBABILIDAD_INTUICION:
 
-            puntaje_maximo = max(
-                puntos[c] for c in disponibles
-            )
+                # 70 %: selección intuitiva
 
-            mejores_categorias = [
-                c for c in disponibles
-                if puntos[c] == puntaje_maximo
-            ]
+                puntaje_maximo = max(
+                    puntos[c] for c in disponibles
+                )
 
-            # En caso de empate, selecciona al azar
+                mejores_categorias = [
+                    c for c in disponibles
+                    if puntos[c] == puntaje_maximo
+                ]
 
-            categoria = rng.choice(mejores_categorias)
+                categoria = rng.choice(
+                    mejores_categorias
+                )
+
+            else:
+
+                # 30 %: selección aleatoria
+
+                categorias_positivas = [
+                    c for c in disponibles
+                    if puntos[c] > 0
+                ]
+
+                if categorias_positivas:
+
+                    categoria = rng.choice(
+                        categorias_positivas
+                    )
+
+                else:
+
+                    categoria = rng.choice(
+                        disponibles
+                    )
 
         # Registrar la categoría seleccionada
 
@@ -416,14 +456,11 @@ registros = []
 
 for id_partida in range(1, NUMERO_PAREJAS + 1):
 
-    # Ambos jugadores comienzan cada turno
-    # con los mismos cinco dados iniciales
-
     tiradas = [
         lanzar(5, rng) for _ in range(11)
     ]
 
-    # Partida del modelo probabilístico
+    # Modelo probabilístico
 
     probabilistica = jugar(
         "Probabilistica",
@@ -431,39 +468,40 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
         random.Random(rng.getrandbits(64))
     )
 
-    # Partida del modelo intuitivo
+    # Modelo de aleatoriedad con intuición
 
-    intuitiva = jugar(
-        "Intuitiva",
+    aleatoria = jugar(
+        "Aleatoria",
         tiradas,
         random.Random(rng.getrandbits(64))
     )
 
-    # Comparar los puntajes finales
+    # Comparar puntajes
 
     p1 = probabilistica["Puntos_acumulados"]
 
-    p2 = intuitiva["Puntos_acumulados"]
+    p2 = aleatoria["Puntos_acumulados"]
 
-    # RESULTADO DE LA PARTIDA
-    # 0 = Derrota
-    # 1 = Victoria
+    # Resultado de la partida
 
     if p1 > p2:
 
         probabilistica["Resultado_partida"] = 1
-
-        intuitiva["Resultado_partida"] = 0
+        aleatoria["Resultado_partida"] = 0
 
     elif p1 < p2:
 
         probabilistica["Resultado_partida"] = 0
+        aleatoria["Resultado_partida"] = 1
 
-        intuitiva["Resultado_partida"] = 1
+    else:
 
-    # Registrar los resultados individuales
+        probabilistica["Resultado_partida"] = 2
+        aleatoria["Resultado_partida"] = 2
 
-    for registro in [probabilistica, intuitiva]:
+    # Registrar los resultados
+
+    for registro in [probabilistica, aleatoria]:
 
         registro["ID_enfrentamiento"] = id_partida
 
@@ -472,9 +510,8 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
     print(
         f"Enfrentamiento {id_partida}: "
         f"Probabilistica = {p1}, "
-        f"Intuitiva = {p2}"
+        f"Aleatoria = {p2}"
     )
-
 
 # 9. EXPORTAR LOS DATOS A CSV
 
@@ -529,7 +566,7 @@ print("Enfrentamientos:", NUMERO_PAREJAS)
 
 print("Partidas probabilisticas:", NUMERO_PAREJAS)
 
-print("Partidas intuitivas:", NUMERO_PAREJAS)
+print("Partidas aleatorias:", NUMERO_PAREJAS)
 
 print("Registros individuales:", len(registros))
 

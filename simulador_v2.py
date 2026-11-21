@@ -11,7 +11,7 @@ from functools import lru_cache
 
 NUMERO_PAREJAS = 20
 SEMILLA = 2026
-ARCHIVO_CSV = "W03_Piloto_Final.csv"
+ARCHIVO_CSV = "W03_Piloto.csv"
 
 NUMEROS = [
     "Unos",
@@ -448,7 +448,6 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
     # RESULTADO DE LA PARTIDA
     # 0 = Derrota
     # 1 = Victoria
-    # 2 = Empate
 
     if p1 > p2:
 
@@ -461,12 +460,6 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
         probabilistica["Resultado_partida"] = 0
 
         intuitiva["Resultado_partida"] = 1
-
-    else:
-
-        probabilistica["Resultado_partida"] = 2
-
-        intuitiva["Resultado_partida"] = 2
 
     # Registrar los resultados individuales
 

@@ -300,7 +300,7 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
     # Resultado de la partida
     # 1 = Victoria
     # 0 = Derrota
-    # 2 = Empate
+    
 
     if p1 > p2:
 
@@ -346,7 +346,7 @@ columnas = [
 ]
 
 with open(
-    "W03_Piloto_corregido.csv", "w",
+    "W03_Piloto.csv", "w",
     newline="", encoding="utf-8-sig"
 ) as archivo:
 

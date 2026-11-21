@@ -12,7 +12,7 @@ from functools import lru_cache
 NUMERO_PAREJAS = 500
 SEMILLA = 2026
 PROBABILIDAD_INTUICION = 0.70
-ARCHIVO_CSV = "W03_Piloto_Final.csv"
+ARCHIVO_CSV = "W03_Piloto_Preliminar.csv"
 
 NUMEROS = [
     "Unos",

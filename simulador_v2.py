@@ -9,10 +9,10 @@ from functools import lru_cache
 
 # CONFIGURACIÓN DEL EXPERIMENTO
 
-NUMERO_PAREJAS = 250
+NUMERO_PAREJAS = 500
 SEMILLA = 2026
 PROBABILIDAD_INTUICION = 0.70
-ARCHIVO_CSV = "W03_Piloto_Preliminar.csv"
+ARCHIVO_CSV = "W03_Piloto_Preliminar2.csv"
 
 NUMEROS = [
     "Unos",

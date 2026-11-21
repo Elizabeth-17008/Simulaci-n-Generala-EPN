@@ -11,7 +11,7 @@ from functools import lru_cache
 
 NUMERO_PAREJAS = 20
 SEMILLA = 2026
-ARCHIVO_CSV = "W03_Piloto.csv"
+ARCHIVO_CSV = "W03_Piloto_Final.csv"
 
 NUMEROS = [
     "Unos",
@@ -36,7 +36,10 @@ CATEGORIAS = NUMEROS + ESPECIALES
 # 1. LANZAMIENTO DE DADOS
 
 def lanzar(n, rng):
-    return tuple(rng.randint(1, 6) for _ in range(n))
+
+    return tuple(
+        rng.randint(1, 6) for _ in range(n)
+    )
 
 
 # 2. REGLAS DE PUNTUACIÓN
@@ -47,6 +50,8 @@ def puntajes(dados):
     conteo = Counter(dados)
     cantidades = sorted(conteo.values())
     valores = set(dados)
+
+    # Categorías numéricas
 
     puntos = {
         categoria: numero * conteo[numero]
@@ -60,18 +65,24 @@ def puntajes(dados):
         for i in range(1, 3)
     )
 
-    # Escalera corta: cuatro números consecutivos,
-    # siempre que no sea una escalera larga.
+    # Escalera corta: cuatro números consecutivos
+    # sin formar una escalera larga
 
     corta = any(
         set(range(i, i + 4)).issubset(valores)
         for i in range(1, 4)
     ) and not larga
 
+    # Combinaciones especiales
+
     puntos["Escalera_corta"] = 20 if corta else 0
+
     puntos["Escalera_larga"] = 30 if larga else 0
+
     puntos["Full"] = 30 if cantidades == [2, 3] else 0
+
     puntos["Poker"] = 45 if max(cantidades) == 4 else 0
+
     puntos["Generala"] = 50 if max(cantidades) == 5 else 0
 
     return puntos
@@ -92,6 +103,22 @@ def resultados_posibles(n):
 
 # 4. CÁLCULO DEL VALOR ESPERADO
 
+def valor_categoria(puntos, categoria, subtotal):
+
+    valor = puntos[categoria]
+
+    # Considerar la bonificación de 35 puntos
+    # si se alcanza el mínimo de 63 puntos
+
+    if categoria in NUMEROS:
+
+        if subtotal < 63 <= subtotal + valor:
+
+            valor += 35
+
+    return valor
+
+
 def mejor_puntaje(dados, disponibles, subtotal):
 
     puntos = puntajes(tuple(sorted(dados)))
@@ -100,21 +127,6 @@ def mejor_puntaje(dados, disponibles, subtotal):
         valor_categoria(puntos, c, subtotal)
         for c in disponibles
     )
-
-
-def valor_categoria(puntos, categoria, subtotal):
-
-    valor = puntos[categoria]
-
-    # Considerar la bonificación de 35 puntos
-    # si se alcanza el mínimo de 63 puntos.
-
-    if categoria in NUMEROS:
-
-        if subtotal < 63 <= subtotal + valor:
-            valor += 35
-
-    return valor
 
 
 def valor_esperado(conservados, disponibles, subtotal):
@@ -136,9 +148,11 @@ def valor_esperado(conservados, disponibles, subtotal):
     return total / (6 ** n)
 
 
-# 5. ESTRATEGIA PROBABILÍSTICA
+# 5. MODELO PROBABILÍSTICO
 
-def elegir_dados(dados, disponibles, subtotal):
+def elegir_dados_probabilistica(
+    dados, disponibles, subtotal
+):
 
     mejor_grupo = tuple(sorted(dados))
 
@@ -148,11 +162,16 @@ def elegir_dados(dados, disponibles, subtotal):
 
     grupos = set()
 
+    # Evaluar las diferentes alternativas
+    # de conservación de dados
+
     for cantidad in range(5):
 
         for grupo in combinations(dados, cantidad):
 
             grupos.add(tuple(sorted(grupo)))
+
+    # Calcular el valor esperado de cada alternativa
 
     for grupo in sorted(grupos):
 
@@ -163,12 +182,69 @@ def elegir_dados(dados, disponibles, subtotal):
         if esperanza > mejor_valor:
 
             mejor_valor = esperanza
+
             mejor_grupo = grupo
 
     return mejor_grupo
 
 
-# 6. SIMULAR UNA PARTIDA COMPLETA
+# 6. MODELO INTUITIVO
+
+def elegir_dados_intuitiva(dados, disponibles, rng):
+
+    puntos_actuales = puntajes(
+        tuple(sorted(dados))
+    )
+
+    # Verificar si existe una combinación especial
+    # que todavía pueda registrarse
+
+    especiales_disponibles = [
+        categoria
+        for categoria in ESPECIALES
+        if categoria in disponibles
+        and puntos_actuales[categoria] > 0
+    ]
+
+    # Si existe una combinación especial disponible,
+    # conservar los cinco dados
+
+    if especiales_disponibles:
+
+        return tuple(dados)
+
+    # Si no existe una combinación especial,
+    # contar las repeticiones de cada número
+
+    conteo = Counter(dados)
+
+    frecuencia_maxima = max(conteo.values())
+
+    # Identificar los números que más se repiten
+
+    candidatos = [
+        numero
+        for numero, frecuencia in conteo.items()
+        if frecuencia == frecuencia_maxima
+    ]
+
+    # Si existe un empate, elegir al azar
+    # uno de los números candidatos
+
+    numero_elegido = rng.choice(candidatos)
+
+    # Conservar los dados del número elegido
+
+    conservados = tuple(
+        dado
+        for dado in dados
+        if dado == numero_elegido
+    )
+
+    return conservados
+
+
+# 7. SIMULAR UNA PARTIDA COMPLETA
 
 def jugar(estrategia, tiradas_iniciales, rng):
 
@@ -176,7 +252,11 @@ def jugar(estrategia, tiradas_iniciales, rng):
 
     disponibles = CATEGORIAS.copy()
 
+    # Suma del primer lanzamiento de la partida
+
     primera_suma = sum(tiradas_iniciales[0])
+
+    # Cada partida tiene once turnos
 
     for ronda in range(11):
 
@@ -190,31 +270,49 @@ def jugar(estrategia, tiradas_iniciales, rng):
 
         for _ in range(2):
 
+            # MODELO PROBABILÍSTICO
+
             if estrategia == "Probabilistica":
 
-                conservados = elegir_dados(
+                conservados = elegir_dados_probabilistica(
                     dados, disponibles, subtotal
+                )
+
+            # MODELO INTUITIVO
+
+            elif estrategia == "Intuitiva":
+
+                conservados = elegir_dados_intuitiva(
+                    dados, disponibles, rng
                 )
 
             else:
 
-                conservados = tuple(
-                    d for d in dados
-                    if rng.random() < 0.5
-                )
+                raise ValueError("Estrategia no reconocida")
+
+            # Si conserva los cinco dados,
+            # finaliza los lanzamientos del turno
 
             if len(conservados) == 5:
+
                 break
+
+            # Relanzar los dados no conservados
 
             dados = conservados + lanzar(
                 5 - len(conservados), rng
             )
 
+        # Calcular los puntos obtenidos
+
         puntos = puntajes(tuple(sorted(dados)))
 
-        # Elegir una categoría disponible
+        # SELECCIÓN DE CATEGORÍA
 
         if estrategia == "Probabilistica":
+
+            # Considerar el puntaje inmediato
+            # y la posibilidad de obtener la bonificación
 
             categoria = max(
                 disponibles,
@@ -225,37 +323,59 @@ def jugar(estrategia, tiradas_iniciales, rng):
 
         else:
 
-            categoria = rng.choice(disponibles)
+            # El jugador intuitivo selecciona
+            # la categoría de mayor puntaje inmediato
 
-        # Registrar el puntaje de la categoría
+            puntaje_maximo = max(
+                puntos[c] for c in disponibles
+            )
+
+            mejores_categorias = [
+                c for c in disponibles
+                if puntos[c] == puntaje_maximo
+            ]
+
+            # En caso de empate, selecciona al azar
+
+            categoria = rng.choice(mejores_categorias)
+
+        # Registrar la categoría seleccionada
 
         planilla[categoria] = puntos[categoria]
+
+        # Eliminar la categoría utilizada
 
         disponibles.remove(categoria)
 
     # Calcular subtotal de categorías numéricas
 
-    subtotal = sum(planilla[c] for c in NUMEROS)
+    subtotal = sum(
+        planilla[c] for c in NUMEROS
+    )
 
     # Calcular la bonificación
 
     bonus = 35 if subtotal >= 63 else 0
 
-    # Calcular puntuación final
+    # Calcular el puntaje final de la partida
 
     total = sum(planilla.values()) + bonus
 
-    # Registrar las variables del estudio
+    # REGISTRO DE LAS VARIABLES DEL ESTUDIO
 
     registro = {
+
         "Estrategia": estrategia,
+
         "Puntos_acumulados": total,
+
         "Primera_suma_dados": primera_suma
+
     }
 
     # Registrar las combinaciones especiales
-    # 1 = combinación registrada con puntos
-    # 0 = combinación no registrada con puntos
+    # 1 = registrada con puntos
+    # 0 = no registrada con puntos
 
     for categoria in ESPECIALES:
 
@@ -267,38 +387,28 @@ def jugar(estrategia, tiradas_iniciales, rng):
     # 1 = obtuvo la bonificación
     # 0 = no obtuvo la bonificación
 
-    registro["Bonificacion_obtenida"] = int(bonus > 0)
-
-    # EVENTO A:
-    # Obtener al menos una combinación especial
-    # registrada con puntos en la planilla.
-
-    registro["Evento_A"] = int(
-        any(planilla[c] > 0 for c in ESPECIALES)
+    registro["Bonificacion_obtenida"] = int(
+        bonus > 0
     )
 
-    # EVENTO B:
-    # Utilizar una estrategia probabilística.
-    # 1 = estrategia probabilística
-    # 0 = decisiones aleatorias
-
-    registro["Evento_B"] = int(
-        estrategia == "Probabilistica"
-    )
-
-    # Verificaciones internas
+    # VERIFICACIONES INTERNAS
 
     assert len(planilla) == 11
+
     assert 0 <= total <= 315
+
     assert 5 <= primera_suma <= 30
+
     assert registro["Bonificacion_obtenida"] in (0, 1)
-    assert registro["Evento_A"] in (0, 1)
-    assert registro["Evento_B"] in (0, 1)
+
+    for categoria in ESPECIALES:
+
+        assert registro[categoria] in (0, 1)
 
     return registro
 
 
-# 7. SIMULAR LOS ENFRENTAMIENTOS
+# 8. SIMULAR LOS ENFRENTAMIENTOS
 
 rng = random.Random(SEMILLA)
 
@@ -306,12 +416,14 @@ registros = []
 
 for id_partida in range(1, NUMERO_PAREJAS + 1):
 
-    # Los dos jugadores comienzan cada ronda
-    # con los mismos cinco dados.
+    # Ambos jugadores comienzan cada turno
+    # con los mismos cinco dados iniciales
 
     tiradas = [
         lanzar(5, rng) for _ in range(11)
     ]
+
+    # Partida del modelo probabilístico
 
     probabilistica = jugar(
         "Probabilistica",
@@ -319,30 +431,46 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
         random.Random(rng.getrandbits(64))
     )
 
-    aleatoria = jugar(
-        "Aleatoria",
+    # Partida del modelo intuitivo
+
+    intuitiva = jugar(
+        "Intuitiva",
         tiradas,
         random.Random(rng.getrandbits(64))
     )
 
-    p1 = probabilistica["Puntos_acumulados"]
-    p2 = aleatoria["Puntos_acumulados"]
+    # Comparar los puntajes finales
 
-    # Resultado de la partida
+    p1 = probabilistica["Puntos_acumulados"]
+
+    p2 = intuitiva["Puntos_acumulados"]
+
+    # RESULTADO DE LA PARTIDA
     # 0 = Derrota
     # 1 = Victoria
+    # 2 = Empate
 
     if p1 > p2:
 
         probabilistica["Resultado_partida"] = 1
-        aleatoria["Resultado_partida"] = 0
+
+        intuitiva["Resultado_partida"] = 0
 
     elif p1 < p2:
 
         probabilistica["Resultado_partida"] = 0
-        aleatoria["Resultado_partida"] = 1
 
-    for registro in [probabilistica, aleatoria]:
+        intuitiva["Resultado_partida"] = 1
+
+    else:
+
+        probabilistica["Resultado_partida"] = 2
+
+        intuitiva["Resultado_partida"] = 2
+
+    # Registrar los resultados individuales
+
+    for registro in [probabilistica, intuitiva]:
 
         registro["ID_enfrentamiento"] = id_partida
 
@@ -350,31 +478,44 @@ for id_partida in range(1, NUMERO_PAREJAS + 1):
 
     print(
         f"Enfrentamiento {id_partida}: "
-        f"Probabilistica = {p1}, Aleatoria = {p2}"
+        f"Probabilistica = {p1}, "
+        f"Intuitiva = {p2}"
     )
 
 
-# 8. EXPORTAR LOS DATOS A CSV
+# 9. EXPORTAR LOS DATOS A CSV
 
 columnas = [
+
     "ID_enfrentamiento",
+
     "Estrategia",
+
     "Puntos_acumulados",
+
     "Primera_suma_dados",
+
     "Escalera_corta",
+
     "Escalera_larga",
+
     "Full",
+
     "Poker",
+
     "Generala",
+
     "Bonificacion_obtenida",
-    "Resultado_partida",
-    "Evento_A",
-    "Evento_B"
+
+    "Resultado_partida"
+
 ]
 
 with open(
-    ARCHIVO_CSV, "w",
-    newline="", encoding="utf-8-sig"
+    ARCHIVO_CSV,
+    "w",
+    newline="",
+    encoding="utf-8-sig"
 ) as archivo:
 
     escritor = csv.DictWriter(
@@ -383,16 +524,24 @@ with open(
     )
 
     escritor.writeheader()
+
     escritor.writerows(registros)
 
 
-# 9. MOSTRAR RESUMEN DE LA SIMULACIÓN
+# 10. MOSTRAR RESUMEN DE LA SIMULACIÓN
 
 print("\nSIMULACION FINALIZADA")
+
 print("Enfrentamientos:", NUMERO_PAREJAS)
+
 print("Partidas probabilisticas:", NUMERO_PAREJAS)
-print("Partidas aleatorias:", NUMERO_PAREJAS)
+
+print("Partidas intuitivas:", NUMERO_PAREJAS)
+
 print("Registros individuales:", len(registros))
+
 print("Variables de estudio:", len(columnas) - 1)
+
 print("Total de columnas:", len(columnas))
+
 print("Archivo generado:", ARCHIVO_CSV)

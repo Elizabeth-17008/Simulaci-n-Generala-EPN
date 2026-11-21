@@ -11,6 +11,7 @@ from functools import lru_cache
 
 NUMERO_PAREJAS = 20
 SEMILLA = 2026
+Probabildad_Intuicion = 0.70
 ARCHIVO_CSV = "W03_Piloto.csv"
 
 NUMEROS = [
@@ -196,8 +197,7 @@ def elegir_dados_intuitiva(dados, disponibles, rng):
         tuple(sorted(dados))
     )
 
-    # Verificar si existe una combinación especial
-    # que todavía pueda registrarse
+    # Verificar combinaciones especiales disponibles
 
     especiales_disponibles = [
         categoria
@@ -206,21 +206,15 @@ def elegir_dados_intuitiva(dados, disponibles, rng):
         and puntos_actuales[categoria] > 0
     ]
 
-    # Si existe una combinación especial disponible,
-    # conservar los cinco dados
-
     if especiales_disponibles:
 
         return tuple(dados)
 
-    # Si no existe una combinación especial,
-    # contar las repeticiones de cada número
+    # Contar las repeticiones de cada número
 
     conteo = Counter(dados)
 
     frecuencia_maxima = max(conteo.values())
-
-    # Identificar los números que más se repiten
 
     candidatos = [
         numero
@@ -228,12 +222,9 @@ def elegir_dados_intuitiva(dados, disponibles, rng):
         if frecuencia == frecuencia_maxima
     ]
 
-    # Si existe un empate, elegir al azar
-    # uno de los números candidatos
+    # Resolver empates al azar
 
     numero_elegido = rng.choice(candidatos)
-
-    # Conservar los dados del número elegido
 
     conservados = tuple(
         dado
@@ -241,7 +232,10 @@ def elegir_dados_intuitiva(dados, disponibles, rng):
         if dado == numero_elegido
     )
 
-    # 6.1. MODELO DE ALEATORIEDAD CON INTUICIÓN
+    return conservados
+
+
+# 6.1. MODELO DE ALEATORIEDAD CON INTUICIÓN
 
 def elegir_dados_aleatoria(dados, disponibles, rng):
 
@@ -261,9 +255,6 @@ def elegir_dados_aleatoria(dados, disponibles, rng):
             dado for dado in dados
             if rng.random() < 0.5
         )
-        
-    return conservados
-
 
 # 7. SIMULAR UNA PARTIDA COMPLETA
 
